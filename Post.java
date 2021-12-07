@@ -1,6 +1,6 @@
 package com.example.weatheraplication;
 
-public class Weather {
+public class Post {
     private String name;
     private Main main;
 
