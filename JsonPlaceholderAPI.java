@@ -7,9 +7,9 @@ import retrofit2.http.Query;
 public interface JsonPlaceholderAPI {
 
     @GET("weather")
-    Call<Post> getWeather(
+    Call<Post> getPost(
             @Query("q") String cityName,
             @Query("APPID") String appId,
-            @Query("units") String units
+            @Query("units") String unit
     );
 }

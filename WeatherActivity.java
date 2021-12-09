@@ -3,11 +3,17 @@ package com.example.weatheraplication;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
+import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.os.Bundle;
 import android.util.Log;
+import android.widget.ImageView;
 import android.widget.TextView;
+
+import com.squareup.picasso.Picasso;
 
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
@@ -32,19 +38,36 @@ public class WeatherActivity extends AppCompatActivity {
         Intent intent = getIntent();
         String cityNameToQuerry = intent.getStringExtra("KEY_CITY_NAME") + ",pl";
 
+        getData(cityNameToQuerry);
+
         reRun(cityNameToQuerry);
 
         swipeRefreshLayout = findViewById(R.id.swipe_layout);
         initializeRefreshListener(cityNameToQuerry);
+
+
+    }
+
+    private boolean isNetworkConnected() {
+        ConnectivityManager connectivityManager = (ConnectivityManager)getSystemService(Context.CONNECTIVITY_SERVICE);
+        if(connectivityManager.getNetworkInfo(ConnectivityManager.TYPE_MOBILE).getState() == NetworkInfo.State.CONNECTED ||
+                connectivityManager.getNetworkInfo(ConnectivityManager.TYPE_WIFI).getState() == NetworkInfo.State.CONNECTED) {
+            return true;
+        }
+        return false;
     }
 
     private void reRun(String cityNameToQuerry) {
+
         new Thread(new Runnable() {
             @Override
             public void run() {
                 try {
                     while (true) {
-                        getData(cityNameToQuerry);
+                        boolean connection = isNetworkConnected();
+                        if (connection == true) {
+                            getData(cityNameToQuerry);
+                        }
                         Thread.sleep(5000);
                     }
                 } catch(InterruptedException e){
@@ -62,7 +85,7 @@ public class WeatherActivity extends AppCompatActivity {
 
         JsonPlaceholderAPI jsonPlaceholderAPI = retrofit.create(JsonPlaceholderAPI.class);
 
-        Call<Post> call = jsonPlaceholderAPI.getWeather(cityNameToQuerry, "749561a315b14523a8f5f1ef95e45864", "metric");
+        Call<Post> call = jsonPlaceholderAPI.getPost(cityNameToQuerry, "749561a315b14523a8f5f1ef95e45864", "metric");
 
         call.enqueue(new Callback<Post>() {
             @Override
@@ -74,8 +97,8 @@ public class WeatherActivity extends AppCompatActivity {
                 }
                 Post post = response.body();
                 String cityName = post.getName();
-                TextView cityViev = findViewById(R.id.cityView);
-                cityViev.setText(cityName);
+                TextView cityView = findViewById(R.id.cityView);
+                cityView.setText(cityName);
 
                 Double tempValue = post.getMain().getTemp();
                 String tempValueReading = tempValue.toString();
@@ -108,23 +131,36 @@ public class WeatherActivity extends AppCompatActivity {
                 TextView timeView = findViewById(R.id.timeView);
                 timeView.setText(currentTimeText);
 
-                saveCityName(cityName);
+                Weather[] weather = post.getWeather();
+                String icon = weather[0].getIcon();
+                ImageView imageView = findViewById(R.id.imageView2);
+                String iconUrl = "https://openweathermap.org/img/wn/"+icon+"@4x.png";
+                Picasso
+                        .get()
+                        .load(iconUrl)
+                        .into(imageView);
 
+                saveCityName(cityName);
 
             }
 
             @Override
             public void onFailure(Call<Post> call, Throwable t) {
-
+                TextView cityView = findViewById(R.id.cityView);
+                cityView.setText(t.getMessage());
             }
         });
+
     }
 
     private void initializeRefreshListener(String cityName) {
         swipeRefreshLayout.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
             @Override
             public void onRefresh() {
-                getData(cityName);
+                boolean connected = isNetworkConnected();
+                if (connected == true) {
+                    getData(cityName);
+                }
                 swipeRefreshLayout.setRefreshing(false);
             }
         });
